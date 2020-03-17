@@ -426,3 +426,56 @@ Next, paste our authorization header into the HTTP Headers box at the bottom:
 ```
 
 Then, run the mutation. You should see a success message, along with the ids of the mutations we just booked. Testing mutations manually in the playground is a good way to explore our API, but in a real-world application, we should run automated tests so we can safely refactor our code. In the next section, you'll actually learn about running your graph in production instead of testing your graph.
+
+
+### Modularize TypeDefs and Resolvers
+In medium or large projects, it is interesting to break queries, types and mutations in smaller groups together with their respective resolvers. Suppose you have many types of data, each with three queries and two mutations.
+
+In `module/product/index.js` we would have the following example content:
+```js
+const { gql } = require('apollo-graphql')
+const typeDefs = gql`
+  type Product {
+    id: ID!
+    name: String!
+    price: Int
+  }
+
+  type Query {
+    product(id: ID!): Product
+    products: [Product]
+    stockProducts: [Product]
+  }
+
+  type Mutation {
+    addProduct(name: String!, price: Int!): Product
+    updateProduct(id: ID!, name: String, price: Int): Product
+    deleteProduct(id: ID!): Boolean
+  }
+`
+
+const resolvers = {
+  Query: {
+    product(id){...},
+    products(){...},
+    stockProducts(){...}
+  },
+  Mutation: {
+    ...
+  }
+}
+
+module.exports = {
+  typeDefs,
+  resolvers
+}
+```
+
+When creating the server, just import the module/modules to create the whole scheme with its respective resolvers
+```js
+const productModule = require('./modules/products')
+new ApolloServer({
+  modules: [productModule],
+  context
+})
+```
